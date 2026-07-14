@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GHOST://TERMINAL — 電脳分析端末</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='none' stroke='%2300e5c0' stroke-width='1.5'/%3E%3Ccircle cx='8' cy='8' r='2' fill='%2300e5c0'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- 背景エフェクト -->
+<canvas id="rain-canvas"></canvas>
+<div class="scanlines" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<!-- ブートシーケンス -->
+<div id="boot-overlay">
+  <pre id="boot-log"></pre>
+</div>
+
+<div id="app" class="hidden">
+
+  <!-- ヘッダー -->
+  <header class="hud-header">
+    <div class="header-left">
+      <div class="logo glitch" data-text="GHOST://TERMINAL">GHOST://TERMINAL</div>
+      <div class="sub-logo">STAND ALONE ANALYSIS UNIT // 電脳分析端末 v2.9</div>
+    </div>
+    <div class="header-right">
+      <div id="clock-main" class="clock-main">--:--:--</div>
+      <div id="clock-date" class="clock-date">----.--.-- ---</div>
+      <div class="conn-status">LINK: <span id="online-status" class="status-ok">ONLINE</span></div>
+    </div>
+  </header>
+
+  <div class="ticker-wrap">
+    <div class="ticker" id="ticker">
+      ▌ SECURE CHANNEL ESTABLISHED ▌ 外部記憶装置との同期完了 ▌ GHOST LINE: STABLE ▌ 攻性防壁: STANDBY ▌ NO INTRUSION DETECTED ▌
+    </div>
+  </div>
+
+  <!-- メイングリッド -->
+  <main class="grid">
+
+    <!-- ═══ システム診断 ═══ -->
+    <section class="panel" id="panel-system">
+      <h2 class="panel-title"><span class="tag">SYS</span>SYSTEM DIAGNOSTICS // 義体状態診断</h2>
+      <div class="panel-body">
+        <table class="kv-table" id="sys-table"></table>
+        <div class="gauge-block">
+          <div class="gauge-row">
+            <span class="gauge-label">POWER CELL</span>
+            <div class="gauge"><div class="gauge-fill" id="battery-gauge" style="width:0%"></div></div>
+            <span class="gauge-val" id="battery-val">--%</span>
+          </div>
+          <div class="gauge-row">
+            <span class="gauge-label">MEM HEAP</span>
+            <div class="gauge"><div class="gauge-fill" id="memory-gauge" style="width:0%"></div></div>
+            <span class="gauge-val" id="memory-val">--</span>
+          </div>
+        </div>
+        <div class="waveform-wrap">
+          <canvas id="waveform" height="46"></canvas>
+          <span class="waveform-label">NEURAL ACTIVITY</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 環境情報 ═══ -->
+    <section class="panel" id="panel-geo">
+      <h2 class="panel-title"><span class="tag">ENV</span>GEO / ATMOSPHERE // 環境走査</h2>
+      <div class="panel-body">
+        <div class="geo-coords">
+          <div>LAT <span id="geo-lat" class="num">--.----</span></div>
+          <div>LON <span id="geo-lon" class="num">--.----</span></div>
+          <div id="geo-source" class="geo-source">POSITION: 取得中…</div>
+        </div>
+        <div class="weather-main">
+          <div class="weather-temp"><span id="wx-temp">--</span><span class="unit">°C</span></div>
+          <div class="weather-desc" id="wx-desc">気象データ受信中…</div>
+        </div>
+        <table class="kv-table" id="wx-table"></table>
+        <div class="world-clocks" id="world-clocks"></div>
+      </div>
+    </section>
+
+    <!-- ═══ データログ ═══ -->
+    <section class="panel panel-wide" id="panel-datalog">
+      <h2 class="panel-title"><span class="tag">LOG</span>PERSONAL DATA LOG // 外部記憶解析</h2>
+      <div class="panel-body datalog-body">
+        <form id="log-form" class="log-form">
+          <select id="log-category" aria-label="カテゴリ">
+            <option value="仕事">仕事</option>
+            <option value="生活">生活</option>
+            <option value="支出">支出</option>
+            <option value="健康">健康</option>
+            <option value="学習">学習</option>
+            <option value="その他">その他</option>
+          </select>
+          <input type="number" id="log-value" placeholder="数値 (時間・金額など)" step="any" required aria-label="数値">
+          <input type="text" id="log-note" placeholder="メモ (任意)" maxlength="60" aria-label="メモ">
+          <button type="submit">RECORD ▸</button>
+          <button type="button" id="log-clear" class="btn-danger">PURGE ALL</button>
+        </form>
+        <div class="datalog-cols">
+          <div class="chart-wrap">
+            <div class="chart-title">カテゴリ別合計</div>
+            <canvas id="log-chart" height="220"></canvas>
+          </div>
+          <div class="log-list-wrap">
+            <div class="chart-title">RECENT ENTRIES</div>
+            <ul id="log-list" class="log-list"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 外部フィード ═══ -->
+    <section class="panel panel-wide" id="panel-feed">
+      <h2 class="panel-title"><span class="tag">NET</span>INTERCEPTED FEED // 傍受通信</h2>
+      <div class="panel-body">
+        <ul id="feed-list" class="feed-list">
+          <li class="feed-loading">◢ 通信傍受中 — SCANNING PUBLIC CHANNELS…</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="hud-footer">
+    <span>SESSION UPTIME: <span id="uptime" class="num">00:00:00</span></span>
+    <span>「ネットは広大だわ」</span>
+    <span>PUBLIC SECURITY SECTION 9 — UNOFFICIAL TERMINAL</span>
+  </footer>
+</div>
+
+<script src="js/fx.js"></script>
+<script src="js/system.js"></script>
+<script src="js/geo.js"></script>
+<script src="js/datalog.js"></script>
+<script src="js/feed.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
