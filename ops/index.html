@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GHOST://OPS — ミッション管理・DIVE端末</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 8 L8 2 L14 8 L8 14 Z' fill='none' stroke='%2300e5c0' stroke-width='1.5'/%3E%3Ccircle cx='8' cy='8' r='1.8' fill='%23ff9e2c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="scanlines" aria-hidden="true"></div>
+
+<div id="app">
+
+  <header class="hud-header">
+    <div class="header-left">
+      <div class="logo">GHOST://OPS</div>
+      <div class="sub-logo">MISSION CONTROL &amp; DIVE PROTOCOL // 作戦管制端末</div>
+    </div>
+    <div class="header-right">
+      <div id="clock-main" class="clock-main">--:--:--</div>
+      <div class="header-links">
+        <a href="../index.html">◂ GHOST://TERMINAL</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <!-- ═══ ミッションボード ═══ -->
+    <section class="panel" id="panel-missions">
+      <h2 class="panel-title"><span class="tag">OPS</span>MISSION BOARD // 任務一覧</h2>
+      <div class="panel-body">
+        <form id="mission-form" class="mission-form">
+          <input type="text" id="m-title" placeholder="新規ミッション名 (例: 報告書を仕上げる)" maxlength="80" required>
+          <select id="m-threat" title="脅威度 (優先度)">
+            <option value="A">脅威度 A — 最優先</option>
+            <option value="B" selected>脅威度 B — 通常</option>
+            <option value="C">脅威度 C — 低</option>
+          </select>
+          <input type="date" id="m-deadline" title="期限 (任意)">
+          <button type="submit">ASSIGN ▸</button>
+        </form>
+        <ul id="mission-list" class="mission-list"></ul>
+        <div class="board-footer">
+          <span id="mission-summary" class="muted"></span>
+          <span class="io-buttons">
+            <button id="btn-export" class="btn-ghost" title="全データをJSONで保存">EXPORT</button>
+            <button id="btn-import" class="btn-ghost" title="JSONから復元">IMPORT</button>
+            <input type="file" id="import-file" accept=".json" hidden>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ DIVEコンソール ═══ -->
+    <section class="panel" id="panel-dive">
+      <h2 class="panel-title"><span class="tag">DIV</span>DIVE CONSOLE // 潜行制御</h2>
+      <div class="panel-body dive-body">
+        <div id="dive-idle">
+          <div class="dive-row">
+            <label class="muted" for="dive-mission">TARGET</label>
+            <select id="dive-mission"></select>
+          </div>
+          <div class="dive-row">
+            <span class="muted">DURATION</span>
+            <div class="duration-btns" id="duration-btns">
+              <button data-min="15">15</button>
+              <button data-min="25" class="sel">25</button>
+              <button data-min="45">45</button>
+              <button data-min="60">60</button>
+            </div>
+            <span class="muted">min</span>
+          </div>
+          <button id="btn-dive" class="btn-dive">▼ DIVE START — 潜行開始</button>
+          <p class="dive-hint muted">潜行中は対象任務に集中。完了時に通知音と集中時間の記録が行われる。</p>
+        </div>
+
+        <div id="dive-active" class="hidden">
+          <div class="dive-target-label muted">DIVING INTO:</div>
+          <div id="dive-target" class="dive-target">—</div>
+          <div id="dive-timer" class="dive-timer">25:00</div>
+          <div class="dive-depth-wrap">
+            <div class="dive-depth" id="dive-depth"></div>
+          </div>
+          <canvas id="dive-wave" height="50"></canvas>
+          <div class="dive-controls">
+            <button id="btn-abort" class="btn-danger">▲ EMERGENCY SURFACE — 緊急浮上</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 統計 ═══ -->
+    <section class="panel" id="panel-stats">
+      <h2 class="panel-title"><span class="tag">MEM</span>DIVE RECORDS // 潜行記録統計</h2>
+      <div class="panel-body">
+        <div class="stat-tiles">
+          <div class="stat-tile">
+            <div class="stat-label">TODAY</div>
+            <div class="stat-num"><span id="st-today">0</span><span class="stat-unit">min</span></div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">LAST 7 DAYS</div>
+            <div class="stat-num"><span id="st-week">0</span><span class="stat-unit">min</span></div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">STREAK</div>
+            <div class="stat-num"><span id="st-streak">0</span><span class="stat-unit">days</span></div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">TOTAL DIVES</div>
+            <div class="stat-num"><span id="st-dives">0</span><span class="stat-unit">回</span></div>
+          </div>
+        </div>
+        <div class="chart-title">SYNCHRONIZATION MAP — 過去15週間の潜行時間</div>
+        <div id="heatmap" class="heatmap"></div>
+        <div class="heatmap-legend muted">
+          少 <span class="hm-cell l0"></span><span class="hm-cell l1"></span><span class="hm-cell l2"></span><span class="hm-cell l3"></span><span class="hm-cell l4"></span> 多
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="hud-footer">
+    <span>「世の中に不満があるなら自分を変えろ」</span>
+    <span>PUBLIC SECURITY SECTION 9 — OPS TERMINAL</span>
+  </footer>
+</div>
+
+<script src="js/store.js"></script>
+<script src="js/missions.js"></script>
+<script src="js/dive.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
